@@ -2,6 +2,7 @@
 //! The scene includes a patterned texture and a rotation for visualizing the normals and UVs.
 
 mod hex;
+mod mesh_generation;
 
 use bevy::{
     prelude::*,
@@ -37,13 +38,10 @@ fn setup(
         ..default()
     });
 
-
-    let mesh = Mesh::from(hex::Hex::default());
-
     let shapes = [
         meshes.add(shape::Box::default().into()),
         meshes.add(shape::Box::default().into()),
-        meshes.add(hex::Hex::default().into()),
+        meshes.add(mesh_generation::hex::create_hex().into()),
     ];
 
     let num_shapes = shapes.len();
@@ -59,7 +57,7 @@ fn setup(
                         2.0,
                         0.0,
                     ),
-                    rotation: Quat::from_rotation_x(-std::f32::consts::PI / 4.),
+                    // rotation: Quat::from_rotation_x(-std::f32::consts::PI / 4.),
                     ..default()
                 },
                 ..default()
