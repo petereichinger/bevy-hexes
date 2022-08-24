@@ -1,8 +1,9 @@
 //! This example demonstrates the built-in 3d shapes in Bevy.
 //! The scene includes a patterned texture and a rotation for visualizing the normals and UVs.
 
-mod hex;
 mod mesh_generation;
+
+use mesh_generation::hex::create_hex;
 
 use bevy::{
     prelude::*,
@@ -38,10 +39,16 @@ fn setup(
         ..default()
     });
 
+    let front_hex = create_hex();
+    let back_hex = create_hex()
+        .rotate(Quat::from_rotation_x(180.0_f32.to_radians()))
+        .unwrap();
+    let double_hex = front_hex.merge(back_hex);
     let shapes = [
         meshes.add(shape::Box::default().into()),
         meshes.add(shape::Box::default().into()),
-        meshes.add(mesh_generation::hex::create_hex().into()),
+        meshes.add(create_hex().into()),
+        meshes.add(double_hex.into()),
     ];
 
     let num_shapes = shapes.len();
@@ -57,6 +64,7 @@ fn setup(
                         2.0,
                         0.0,
                     ),
+
                     // rotation: Quat::from_rotation_x(-std::f32::consts::PI / 4.),
                     ..default()
                 },
