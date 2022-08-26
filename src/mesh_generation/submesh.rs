@@ -1,6 +1,7 @@
 use bevy::prelude::{Mesh, Quat, Vec2, Vec3};
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vertex {
     pub(super) position: Vec3,
@@ -11,6 +12,20 @@ pub struct Vertex {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Triangle {
     pub(super) indices: [u32; 3],
+}
+
+impl Triangle {
+    pub fn new(a: u32, b: u32, c: u32) -> Self {
+        Triangle { indices: [a, b, c] }
+    }
+}
+
+impl From<&[u32; 3]> for Triangle {
+    fn from(indices: &[u32; 3]) -> Self {
+        return Triangle {
+            indices: indices.clone(),
+        };
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

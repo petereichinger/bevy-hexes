@@ -3,7 +3,7 @@
 
 mod mesh_generation;
 
-use mesh_generation::hex::create_hex;
+use mesh_generation::hex::{create_hex, create_hex_prism};
 
 use bevy::{
     prelude::*,
@@ -39,16 +39,11 @@ fn setup(
         ..default()
     });
 
-    let front_hex = create_hex();
-    let back_hex = create_hex()
-        .rotate(Quat::from_rotation_x(180.0_f32.to_radians()))
-        .unwrap();
-    let double_hex = front_hex.merge(back_hex);
     let shapes = [
         meshes.add(shape::Box::default().into()),
         meshes.add(shape::Box::default().into()),
-        meshes.add(create_hex().into()),
-        meshes.add(double_hex.into()),
+        meshes.add(create_hex(1.0).into()),
+        meshes.add(create_hex_prism(2.0, 1.0).into()),
     ];
 
     let num_shapes = shapes.len();
