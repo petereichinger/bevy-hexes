@@ -32,6 +32,7 @@ fn main() {
         .add_startup_system(setup)
         .add_system(move_hexes)
         .add_system(select_hex)
+        .add_system(log_selected_hex)
         .run();
 }
 
@@ -110,16 +111,18 @@ fn setup(
 fn select_hex(
     mut commands: Commands,
     rapier_context: Res<RapierContext>,
-    camera_query: Query<(&Transform, &Camera), With<CurrentCameraTag>>,
+    camera_query: Query<(&GlobalTransform, &Camera), With<CurrentCameraTag>>,
     hexagon_query: Query<(Entity, &Hexagon, Option<&Selected>)>,
+    btn: Res<Input<MouseButton>>,
 ) {
+    if !btn.just_pressed(MouseButton::Left) {
+        return;
+    }
     let (transform, camera) = camera_query.single();
-
-    let global_transformation = GlobalTransform::from(*transform);
 
     let ray_origin = camera
         .ndc_to_world(
-            &global_transformation,
+            transform,
             Vec3 {
                 x: 0.,
                 y: 0.,
@@ -148,4 +151,13 @@ fn select_hex(
             };
         }
     }
+}
+
+fn log_selected_hex(hexagon_query: Query<(&Hexagon, &Selected)>) {
+    let hex_str: String = hexagon_query
+        .iter()
+        .map(|(hex, _)| format!("{} ", hex.0))
+        .collect();
+
+    info!("{}", hex_str);
 }
