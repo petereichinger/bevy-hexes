@@ -36,6 +36,27 @@
 				"kind": "test",
 				"isDefault": true
 			}
+		},
+		{
+			"type": "cargo",
+			"command": "watch",
+			"args": [
+				"-c",
+				"-w",
+				"src",
+				"-w",
+				"Cargo.toml",
+				"-x",
+				"build"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"label": "rust: cargo watch build",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
 		}
 	]
 }
