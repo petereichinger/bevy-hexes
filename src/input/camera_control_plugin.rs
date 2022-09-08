@@ -110,8 +110,6 @@ fn rotate_camera(
     let mut transform = query.single_mut();
     transform.rotate_local(quat_up_down);
     transform.rotate(quat_left_right);
-
-    info!("{:?}", transform.rotation.to_euler(EulerRot::XYZ));
 }
 
 fn cursor_grab_system(
