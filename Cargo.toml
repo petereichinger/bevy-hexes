@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = {path="../bevy", features = ["dynamic"]}
+bevy = { path = "../bevy", features = ["dynamic"] }
+bevy_rapier3d = { version = "0.16.2", features = ["debug-render"] }
 
 
 # Enable a small amount of optimization in debug mode
@@ -15,3 +16,5 @@ opt-level = 1
 [profile.dev.package."*"]
 opt-level = 3
 
+[patch.crates-io]
+bevy = { path = "../bevy" } # Necessary because we use a locally built bevy...
