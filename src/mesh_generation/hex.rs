@@ -5,18 +5,18 @@ use super::submesh::{SubMesh, Triangle, Vertex};
 fn get_hex_point(n: u8, size: f32) -> Vec3 {
     let degree = (60.0 * (n as f32)) - 30.0;
     let radians = degree.to_radians();
-    size * Vec3::new(radians.cos(), radians.sin(), 0.0)
+    size * Vec3::new(radians.cos(), 0.0, radians.sin())
 }
 
 fn get_hex_side_normal(n: u8) -> Vec3 {
     let degree = 60.0 * (n as f32);
     let radians = degree.to_radians();
-    Vec3::new(radians.cos(), radians.sin(), 0.0)
+    Vec3::new(radians.cos(), 0.0, radians.sin())
 }
 
 pub fn create_hex(size: f32) -> SubMesh {
     let positions = [
-        Vec3::ZERO,
+        Vec3::new(0.0, 0.0, 0.0),
         get_hex_point(0, size),
         get_hex_point(1, size),
         get_hex_point(2, size),
@@ -29,18 +29,18 @@ pub fn create_hex(size: f32) -> SubMesh {
         .into_iter()
         .map(|pos| Vertex {
             position: pos,
-            normal: Vec3::Z,
+            normal: Vec3::Y,
             uv: Vec2::ZERO,
         })
         .collect();
 
     let triangles = vec![
-        Triangle { indices: [0, 1, 2] },
-        Triangle { indices: [0, 2, 3] },
-        Triangle { indices: [0, 3, 4] },
-        Triangle { indices: [0, 4, 5] },
-        Triangle { indices: [0, 5, 6] },
-        Triangle { indices: [0, 6, 1] },
+        Triangle { indices: [0, 2, 1] },
+        Triangle { indices: [0, 3, 2] },
+        Triangle { indices: [0, 4, 3] },
+        Triangle { indices: [0, 5, 4] },
+        Triangle { indices: [0, 6, 5] },
+        Triangle { indices: [0, 1, 6] },
     ];
 
     SubMesh::new(vertices, triangles).unwrap()
@@ -57,7 +57,7 @@ fn create_hex_prism_side(n1: u8, n2: u8, size: f32, height: f32) -> [Vertex; 4] 
         uv: Vec2::ZERO,
     };
     let v2 = Vertex {
-        position: side_n1 + (height * Vec3::Z),
+        position: side_n1 + (height * Vec3::Y),
         normal,
         uv: Vec2::ZERO,
     };
@@ -67,7 +67,7 @@ fn create_hex_prism_side(n1: u8, n2: u8, size: f32, height: f32) -> [Vertex; 4] 
         uv: Vec2::ZERO,
     };
     let v4 = Vertex {
-        position: side_n2 + (height * Vec3::Z),
+        position: side_n2 + (height * Vec3::Y),
         normal,
         uv: Vec2::ZERO,
     };
@@ -79,7 +79,7 @@ pub fn create_hex_prism_sides(size: f32, height: f32) -> SubMesh {
     let mut vertices = vec![];
     let mut triangles = vec![];
 
-    let tri_indices = [[0u32, 2, 3], [0, 3, 1]];
+    let tri_indices = [[0u32, 3, 2], [0, 1, 3]];
 
     for i in 0..6 {
         vertices.extend_from_slice(&create_hex_prism_side(i, i + 1u8, size, height));
@@ -94,7 +94,7 @@ pub fn create_hex_prism_sides(size: f32, height: f32) -> SubMesh {
 }
 
 pub fn create_hex_prism(size: f32, height: f32) -> SubMesh {
-    let front_hex = create_hex(size).translate(Vec3::Z * height).unwrap();
+    let front_hex = create_hex(size).translate(Vec3::Y * height).unwrap();
     let back_hex = create_hex(size)
         .rotate(Quat::from_rotation_x(180.0_f32.to_radians()))
         .unwrap();
