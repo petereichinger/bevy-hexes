@@ -34,6 +34,6 @@ impl From<Offset> for IVec2 {
 
 impl Display for Offset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "O[{}, {}]", self.col, self.row)
+        write!(f, "O[{}, {}]", self.col, self.row)
     }
 }

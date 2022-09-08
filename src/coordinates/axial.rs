@@ -57,6 +57,6 @@ impl From<Axial> for Vec3 {
 
 impl Display for Axial {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "A[{}, {}]", self.q, self.r)
+        write!(f, "A[{}, {}]", self.q, self.r)
     }
 }

@@ -66,6 +66,6 @@ impl From<Cube> for Offset {
 
 impl Display for Cube {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "C[{}, {}, {}]", self.q, self.r, self.s)
+        write!(f, "C[{}, {}, {}]", self.q, self.r, self.s)
     }
 }
