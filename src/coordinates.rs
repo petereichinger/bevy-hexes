@@ -1,5 +1,6 @@
 mod axial;
 mod cube;
+mod cube_direction;
 mod offset;
 
 pub use axial::Axial;

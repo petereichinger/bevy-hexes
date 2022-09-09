@@ -4,6 +4,8 @@ use super::{axial::Axial, offset::Offset};
 
 use thiserror::Error;
 
+pub use super::cube_direction::Direction;
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum CoordinateError {
     #[error("Requirement q + r + s == 0 not fulfilled")]
@@ -43,6 +45,18 @@ impl std::ops::Sub<Cube> for Cube {
     }
 }
 
+impl std::ops::Add<Cube> for Cube {
+    type Output = Cube;
+
+    fn add(self, rhs: Cube) -> Self::Output {
+        Self {
+            q: self.q + rhs.q,
+            r: self.r + rhs.r,
+            s: self.s + rhs.s,
+        }
+    }
+}
+
 impl Cube {
     fn abs(self) -> Self {
         Self {
@@ -58,6 +72,11 @@ impl Cube {
 
     pub fn distance_to(self, other: Self) -> u32 {
         (self - other).abs().max_component() as u32
+    }
+
+    pub fn neighbours(self) -> impl Iterator<Item = Cube> {
+        use strum::IntoEnumIterator;
+        Direction::iter().map(move |d| self + Cube::from(d))
     }
 }
 
@@ -83,7 +102,7 @@ impl Display for Cube {
 
 #[cfg(test)]
 mod tests {
-    use super::Cube;
+    use super::*;
 
     #[test]
     fn creation_of_trivial_coordinate_works() {
@@ -135,5 +154,18 @@ mod tests {
         let other = Cube::new(1, 2, -3).unwrap();
 
         assert_eq!(Cube::origin().distance_to(other), 3);
+    }
+
+    #[test]
+    fn neighbours_works() {
+        let origin_neighbours: Vec<Cube> = Cube::origin().neighbours().collect();
+
+        assert_eq!(origin_neighbours.len(), 6);
+        assert!(origin_neighbours.contains(&Cube::new(1, 0, -1).unwrap()));
+        assert!(origin_neighbours.contains(&Cube::new(1, -1, 0).unwrap()));
+        assert!(origin_neighbours.contains(&Cube::new(0, -1, 1).unwrap()));
+        assert!(origin_neighbours.contains(&Cube::new(-1, 0, 1).unwrap()));
+        assert!(origin_neighbours.contains(&Cube::new(-1, 1, 0).unwrap()));
+        assert!(origin_neighbours.contains(&Cube::new(0, 1, -1).unwrap()));
     }
 }
