@@ -81,8 +81,9 @@ impl Display for Cube {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Cube;
 
     #[test]
     fn creation_of_trivial_coordinate_works() {

@@ -56,7 +56,8 @@
 			"group": {
 				"kind": "build",
 				"isDefault": false
-			}
+			},
+			"isBackground": true
 		}
 	]
 }
