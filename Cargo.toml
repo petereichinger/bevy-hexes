@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 bevy = { path = "../bevy", features = ["dynamic"] }
 bevy_rapier3d = { version = "0.16.2", features = ["debug-render"] }
+thiserror = "1.0.34"
 
 
 # Enable a small amount of optimization in debug mode
