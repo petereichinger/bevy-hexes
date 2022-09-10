@@ -1,3 +1,5 @@
+use std::{cmp::Ordering, collections::HashMap};
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
@@ -10,26 +12,31 @@ use crate::{
 struct Hexagon(Cube);
 
 #[derive(Component)]
-struct Selected;
+struct Energy(f32);
 
 pub struct HexWorld;
 
 impl Plugin for HexWorld {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup)
-            .add_system(move_hexes)
             .add_system(select_hex)
-            .add_system(log_selected_hex);
+            // .add_system(reduce_energy)
+            .add_system(distribute_energy)
+            .add_system(move_hexes.after(distribute_energy));
     }
 }
 
-fn move_hexes(time: Res<Time>, mut query: Query<(&mut Transform, &Hexagon)>) {
-    let origin = Default::default();
-    let startup_time = 1.5 * time.time_since_startup().as_secs_f32();
-    for (mut transform, hex) in query.iter_mut() {
-        let distance = hex.0.distance_to(origin) as f32;
+fn move_hexes(time: Res<Time>, mut query: Query<(&mut Transform, &Energy)>) {
+    // let origin = Default::default();
+    // let startup_time = 1.5 * time.time_since_startup().as_secs_f32();
+    // for (mut transform, hex) in query.iter_mut() {
+    //     let distance = hex.0.distance_to(origin) as f32;
 
-        transform.translation.y = 1. + 0.25 * (distance + -startup_time).sin();
+    //     transform.translation.y = 1. + 0.25 * (distance + -startup_time).sin();
+    // }
+
+    for (mut transform, energy) in query.iter_mut() {
+        transform.translation.y = energy.0;
     }
 }
 
@@ -39,7 +46,6 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let material = materials.add(StandardMaterial {
-        // base_color_texture: Some(images.add(uv_debug_texture())),
         base_color: Color::rgb_u8(0, 98, 105),
         metallic: 0.8,
         ..default()
@@ -68,16 +74,16 @@ fn setup(
                         &ComputedColliderShape::TriMesh,
                     )
                     .unwrap(),
-                );
+                )
+                .insert(Energy(0.));
         }
     }
 }
 
 fn select_hex(
-    mut commands: Commands,
     rapier_context: Res<RapierContext>,
     camera_query: Query<(&GlobalTransform, &Camera), With<CurrentCameraTag>>,
-    hexagon_query: Query<(Entity, &Hexagon, Option<&Selected>)>,
+    mut hexagon_query: Query<(Entity, &Hexagon, &mut Energy)>,
     btn: Res<Input<MouseButton>>,
 ) {
     if !btn.just_pressed(MouseButton::Left) {
@@ -102,30 +108,64 @@ fn select_hex(
     if let Some((entity, _toi)) =
         rapier_context.cast_ray(ray_origin, ray_dir, max_toi, solid, Default::default())
     {
-        if let Some((entity, hex, selected)) = hexagon_query
-            .iter()
-            .find(|(ent, _hex, _selected)| ent.id() == entity.id())
+        if let Some((entity, hex, mut energy)) = hexagon_query
+            .iter_mut()
+            .find(|(ent, _hex, _energy)| ent.id() == entity.id())
         {
             let coord = Offset::from(hex.0);
             info!("{}", coord);
 
-            let mut entitycommands = commands.entity(entity);
-            if let Some(Selected) = selected {
-                entitycommands.remove::<Selected>()
-            } else {
-                entitycommands.insert(Selected)
-            };
+            energy.0 += 1.0;
+
+            // let mut entitycommands = commands.entity(entity);
         }
     }
 }
 
-fn log_selected_hex(hexagon_query: Query<(&Hexagon, &Selected)>) {
-    let hex_str: String = hexagon_query
+// fn reduce_energy( mut energy_query: Query<&mut Energy>) {
+//     for mut energy in energy_query.iter_mut() {
+//         energy.0 -= 0.9 * energy.0 * time.delta_seconds();
+
+//         energy.0 = f32::max(0., energy.0);
+//     }
+// }
+
+fn nan_max(f: &f32, s: &f32) -> Ordering {
+    let f = if f.is_nan() { 0. } else { *f };
+    let s = if s.is_nan() { 0. } else { *s };
+
+    if f < s {
+        Ordering::Less
+    } else if s < f {
+        Ordering::Greater
+    } else {
+        Ordering::Equal
+    }
+}
+
+fn distribute_energy(time: Res<Time>, mut query: Query<(&Hexagon, &mut Energy)>) {
+    let old_energy: HashMap<Cube, f32> = query
         .iter()
-        .map(|(hex, _)| format!("{} ", hex.0))
+        .map(|(hex, energy)| (hex.0, energy.0))
         .collect();
 
-    if !hex_str.is_empty() {
-        info!("{}", hex_str);
+    let mut new_energy = HashMap::new();
+
+    let dispersal_factor = 0.4;
+
+    for (hex, energy) in query.iter() {
+        let dispersed_energy = dispersal_factor * time.delta_seconds() * energy.0;
+
+        let per_neighbour_energy = 1. / 6. * dispersed_energy;
+
+        for neighbour in hex.0.neighbours() {
+            *new_energy.entry(neighbour).or_insert(0.) += per_neighbour_energy;
+        }
+    }
+    // info!("{:?}",);
+
+    for (hex, mut energy) in query.iter_mut() {
+        energy.0 = energy.0 - 1.1 * dispersal_factor * time.delta_seconds() * energy.0
+            + new_energy.get(&hex.0).unwrap_or(&0.);
     }
 }
