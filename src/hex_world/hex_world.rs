@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap};
+use std::collections::HashMap;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -8,11 +8,18 @@ use crate::{
     input::camera_control_plugin::CurrentCameraTag, mesh_generation::hex::create_hex_prism,
 };
 
+use itertools::Itertools;
+
+use bevy_trafo::Trafo;
+
 #[derive(Component)]
 struct Hexagon(Cube);
 
 #[derive(Component)]
-struct Energy(f32);
+struct Energy {
+    velocity: Vec3,
+    // acceleration: Vec3,
+}
 
 pub struct HexWorld;
 
@@ -20,24 +27,20 @@ impl Plugin for HexWorld {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup)
             .add_system(select_hex)
-            // .add_system(reduce_energy)
-            .add_system(distribute_energy)
-            .add_system(move_hexes.after(distribute_energy));
+            .add_system(integrate)
+            .add_system(distribute_velocity.after(integrate));
     }
 }
 
-fn move_hexes(time: Res<Time>, mut query: Query<(&mut Transform, &Energy)>) {
-    // let origin = Default::default();
-    // let startup_time = 1.5 * time.time_since_startup().as_secs_f32();
-    // for (mut transform, hex) in query.iter_mut() {
-    //     let distance = hex.0.distance_to(origin) as f32;
+fn get_coordinates() -> impl Iterator<Item = Axial> {
+    (-25..=25)
+        .cartesian_product(-25..=25)
+        .map(|(x, y)| Offset::new(x, y).into())
 
-    //     transform.translation.y = 1. + 0.25 * (distance + -startup_time).sin();
-    // }
-
-    for (mut transform, energy) in query.iter_mut() {
-        transform.translation.y = energy.0;
-    }
+    // Cube::origin()
+    //     .neighbours()
+    //     .map(|c| c.into())
+    //     .chain(std::iter::once(Axial::origin()))
 }
 
 fn setup(
@@ -53,30 +56,29 @@ fn setup(
 
     let mesh = meshes.add(create_hex_prism(0.49, 0.25).into());
 
-    for x in -25..=25 {
-        for y in -25..=25 {
-            let axial: Axial = Offset::new(x, y).into();
-            commands
-                .spawn_bundle(PbrBundle {
-                    mesh: mesh.clone(),
-                    material: material.clone(),
-                    transform: Transform {
-                        translation: axial.into(),
-                        ..default()
-                    },
+    for axial in get_coordinates() {
+        commands
+            .spawn_bundle(PbrBundle {
+                mesh: mesh.clone(),
+                material: material.clone(),
+                transform: Transform {
+                    translation: axial.into(),
                     ..default()
-                })
-                .insert(Hexagon(axial.into()))
-                .insert(RigidBody::KinematicPositionBased)
-                .insert(
-                    Collider::from_bevy_mesh(
-                        Assets::get(&meshes, &mesh).unwrap(),
-                        &ComputedColliderShape::TriMesh,
-                    )
-                    .unwrap(),
+                },
+                ..default()
+            })
+            .insert(Hexagon(axial.into()))
+            .insert(RigidBody::KinematicPositionBased)
+            .insert(
+                Collider::from_bevy_mesh(
+                    Assets::get(&meshes, &mesh).unwrap(),
+                    &ComputedColliderShape::TriMesh,
                 )
-                .insert(Energy(0.));
-        }
+                .unwrap(),
+            )
+            .insert(Energy {
+                velocity: Vec3::ZERO,
+            });
     }
 }
 
@@ -115,57 +117,60 @@ fn select_hex(
             let coord = Offset::from(hex.0);
             info!("{}", coord);
 
-            energy.0 += 1.0;
-
-            // let mut entitycommands = commands.entity(entity);
+            energy.velocity += Vec3::Y * 30.;
         }
     }
 }
 
-// fn reduce_energy( mut energy_query: Query<&mut Energy>) {
-//     for mut energy in energy_query.iter_mut() {
-//         energy.0 -= 0.9 * energy.0 * time.delta_seconds();
+fn integrate(time: Res<Time>, mut query: Query<(&mut Transform, &mut Energy)>) {
+    for (mut t, mut e) in query.iter_mut() {
+        let spring = 10.;
+        let mass = 1.0;
+        let x = t.translation.y;
+        let damp = 1.5;
+        let acceleration = -(spring / mass) * x - damp * e.velocity.y;
 
-//         energy.0 = f32::max(0., energy.0);
-//     }
-// }
+        let acceleration = acceleration * Vec3::Y;
 
-fn nan_max(f: &f32, s: &f32) -> Ordering {
-    let f = if f.is_nan() { 0. } else { *f };
-    let s = if s.is_nan() { 0. } else { *s };
+        t.translation += time.delta_seconds() * e.velocity;
+        e.velocity += time.delta_seconds() * acceleration;
 
-    if f < s {
-        Ordering::Less
-    } else if s < f {
-        Ordering::Greater
-    } else {
-        Ordering::Equal
+        if e.velocity.y.abs() <= 0.0001 {
+            e.velocity.y = 0.
+        }
     }
 }
 
-fn distribute_energy(time: Res<Time>, mut query: Query<(&Hexagon, &mut Energy)>) {
-    let old_energy: HashMap<Cube, f32> = query
+fn distribute_velocity(time: Res<Time>, mut query: Query<(&Hexagon, &Transform, &mut Energy)>) {
+    let height_map: HashMap<_, _> = query
         .iter()
-        .map(|(hex, energy)| (hex.0, energy.0))
+        .map(|(h, t, _)| (h.0, t.translation.y))
         .collect();
 
-    let mut new_energy = HashMap::new();
+    // info!("{:?}", height_map);
 
-    let dispersal_factor = 0.4;
+    let mut dist = HashMap::new();
 
-    for (hex, energy) in query.iter() {
-        let dispersed_energy = dispersal_factor * time.delta_seconds() * energy.0;
-
-        let per_neighbour_energy = 1. / 6. * dispersed_energy;
-
+    for (hex, t, mut e) in query.iter_mut() {
+        // if e.velocity.y.abs() < f32::EPSILON {
+        //     continue;
+        // }
         for neighbour in hex.0.neighbours() {
-            *new_energy.entry(neighbour).or_insert(0.) += per_neighbour_energy;
+            let spring = 1.;
+            let mass = 1.0;
+            let x = (t.translation.y - height_map.get(&neighbour).unwrap_or(&0.0)).abs();
+            let damp = 0.1;
+            let acceleration = -(spring / mass) * x - damp * e.velocity.y;
+
+            // info!("{} {} {}", hex.0, neighbour, acceleration);
+            let acceleration = 0.9 * acceleration * Vec3::Y;
+            *dist.entry(neighbour).or_insert(Vec3::ZERO) -= acceleration;
+            *dist.entry(hex.0).or_insert(Vec3::ZERO) += acceleration;
         }
     }
-    // info!("{:?}",);
 
-    for (hex, mut energy) in query.iter_mut() {
-        energy.0 = energy.0 - 1.1 * dispersal_factor * time.delta_seconds() * energy.0
-            + new_energy.get(&hex.0).unwrap_or(&0.);
+    // info!("END");
+    for (hex, t, mut e) in query.iter_mut() {
+        e.velocity += *dist.get(&hex.0).unwrap_or(&Vec3::ZERO);
     }
 }

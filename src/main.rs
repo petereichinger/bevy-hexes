@@ -43,11 +43,4 @@ fn create_plane_and_light(
         transform: Transform::from_xyz(20., 16.0, 0.),
         ..default()
     });
-
-    // ground plane
-    commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(shape::Plane { size: 50. }.into()),
-        material: materials.add(Color::GOLD.into()),
-        ..default()
-    });
 }

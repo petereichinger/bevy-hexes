@@ -4,12 +4,12 @@ use super::Cube;
 
 #[derive(Debug, PartialEq, Eq, Hash, EnumIter)]
 pub enum Direction {
-    NE,
     E,
-    SE,
-    SW,
-    W,
+    NE,
     NW,
+    W,
+    SW,
+    SE,
 }
 
 impl From<Direction> for Cube {
