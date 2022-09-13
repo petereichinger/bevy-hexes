@@ -1,22 +1,12 @@
 [package]
-name = "bevy-hexes"
+name = "bevy_hexes"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { path = "../bevy", features = ["dynamic"] }
+bevy = { version = "0.8", features = ["dynamic"] }
 bevy_rapier3d = { version = "0.16", features = ["debug-render"] }
+bevy_trafo = { path = "../bevy_trafo" }
+itertools = "0.10.3"
 strum = { version = "0.24", features = ["derive"] }
 thiserror = "1.0"
-
-
-# Enable a small amount of optimization in debug mode
-[profile.dev]
-opt-level = 1
-
-# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
-[profile.dev.package."*"]
-opt-level = 3
-
-[patch.crates-io]
-bevy = { path = "../bevy" } # Necessary because we use a locally built bevy...
