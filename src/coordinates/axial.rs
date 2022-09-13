@@ -11,6 +11,10 @@ pub struct Axial {
 }
 
 impl Axial {
+    pub fn origin() -> Self {
+        Self { q: 0, r: 0 }
+    }
+
     pub fn new(q: i32, r: i32) -> Self {
         Self { q, r }
     }
